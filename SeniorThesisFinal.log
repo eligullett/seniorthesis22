@@ -1,0 +1,1629 @@
+----------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  C:\Users\gulle\Downloads\Thesis Stata\SeniorThesisFinal.log
+  log type:  text
+ opened on:  17 Apr 2022, 11:24:27
+
+. 
+. cd "C:\Users\gulle\Downloads\Thesis Stata"
+C:\Users\gulle\Downloads\Thesis Stata
+
+. use "C:\Users\gulle\Downloads\Thesis Stata\usa_00008.dta"
+
+. 
+. *IPUMS Data Cleaning*
+. replace hhwt      = hhwt      / 100
+(1,157,529 real changes made)
+
+. replace perwt     = perwt     / 100
+(1,157,529 real changes made)
+
+. 
+. format serial    %8.0f
+
+. format cbserial  %13.0f
+
+. format hhwt      %10.2f
+
+. format cluster   %13.0f
+
+. format strata    %12.0f
+
+. format perwt     %10.2f
+
+. 
+. label var year      `"Census year"'
+
+. label var sample    `"IPUMS sample identifier"'
+
+. label var serial    `"Household serial number"'
+
+. label var cbserial  `"Original Census Bureau household serial number"'
+
+. label var hhwt      `"Household weight"'
+
+. label var cluster   `"Household cluster for variance estimation"'
+
+. label var met2013   `"Metropolitan area (2013 OMB delineations)"'
+
+. label var city          `"City"'
+
+. label var cityerr   `"Coverage Error in City"'
+
+. label var citypop   `"City Population"'
+
+. label var strata    `"Household strata for variance estimation"'
+
+. label var gq        `"Group quarters status"'
+
+. label var ownershp  `"Ownership Status of Dwelling (Tenure)"'
+
+. label var ownershpd `"Ownership Status of Dwelling (Tenure) (Detailed)"'
+
+. label var mortgage   `"Mortgage Status"'
+
+. label var proptx99   `"Annual Property Taxes"'
+
+. label var rent      `"Monthly contract rent"'
+
+. label var valueh   `"House Value"'
+
+. label var coupletype   `"Householder Couple Type"'
+
+. label var bedrooms  `"Number of bedrooms"'
+
+. label var pernum    `"Person number in sample unit"'
+
+. label var perwt     `"Person weight"'
+
+. label var nchild    `"Number of own children in the household"'
+
+. label var nchlt5   `"Number of own children in household under 5"'
+
+. label var age           `"Age"'
+
+. label var hispan   `"Hispanic Origin"'
+
+. label var marst     `"Marital status"'
+
+. label var race      `"Race [general version]"'
+
+. label var raced     `"Race [detailed version]"'
+
+. label var educ      `"Educational attainment [general version]"'
+
+. label var educd     `"Educational attainment [detailed version]"'
+
+. label var incwage   `"Wage and salary income"'
+
+. label var incwelfr  `"Welfare (public assistance) income"'
+
+. 
+. *Cleaning
+. 
+. drop if age < 18
+(0 observations deleted)
+
+. drop if age > 65
+(0 observations deleted)
+
+. describe age
+
+Variable      Storage   Display    Value
+    name         type    format    label      Variable label
+----------------------------------------------------------------------------------
+age             byte    %36.0g     age_lbl    Age
+
+. summarize age
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+         age |  1,157,529    42.09891    14.04948         18         65
+
+. 
+. drop if met2013 == 00000
+(0 observations deleted)
+
+. summarize met2013
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+     met2013 |  1,157,529    31344.46    10423.11      10420      49740
+
+. 
+. drop if countyfip == 0
+(0 observations deleted)
+
+. 
+. *Merging Wharton & ACS*
+. use "C:\Users\gulle\Downloads\WRLURI_01_15_2020 (2).dta", clear
+
+. sort cbsacode18
+
+. collapse (mean) LPPI18  CII18  LPAI18  LZAI18  LAI18  SRI18  DRI18  OSI18  EI18 
+>  AHI18 ADI18 WRLURI18,  by (cbsacode18)
+
+. 
+. save "C:\Users\gulle\Downloads\WRLURI_01_15_2020Collapsed.dta", replace
+file C:\Users\gulle\Downloads\WRLURI_01_15_2020Collapsed.dta saved
+
+. 
+. keep if cbsacode18 != .
+(1 observation deleted)
+
+. 
+. use "C:\Users\gulle\Downloads\Thesis Stata\usa_00008.dta", clear
+
+. rename met2013 cbsacode18, replace
+
+. 
+. sort cbsacode18
+
+. 
+. describe cbsacode18
+
+Variable      Storage   Display    Value
+    name         type    format    label      Variable label
+----------------------------------------------------------------------------------
+cbsacode18      long    %46.0g     met2013_lbl
+                                              Metropolitan area (2013 OMB
+                                                delineations)
+
+. summarize cbsacode18
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+  cbsacode18 |  1,157,529    31344.46    10423.11      10420      49740
+
+. 
+. merge m:1 cbsacode18 using "C:\Users\gulle\Downloads\WRLURI_01_15_2020Collapsed.
+> dta"
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                        37,985
+        from master                    37,593  (_merge==1)
+        from using                        392  (_merge==2)
+
+    Matched                         1,119,936  (_merge==3)
+    -----------------------------------------
+
+. 
+. sum WRLURI18, detail
+
+                       (mean) WRLURI18
+-------------------------------------------------------------
+      Percentiles      Smallest
+ 1%    -1.086379      -2.258814
+ 5%    -.5088813      -2.216394
+10%    -.3787233      -2.055567       Obs           1,112,191
+25%    -.0632767      -1.936406       Sum of wgt.   1,112,191
+
+50%     .4742395                      Mean           .3799813
+                        Largest       Std. dev.      .5673076
+75%     .7278132       2.982143
+90%     1.037953       2.982143       Variance       .3218379
+95%     1.182753       2.982143       Skewness       .0074101
+99%     1.603167       2.982143       Kurtosis        3.32465
+
+. **Note to self: EI18 is a Dummy Variable 
+. **ADI18 is average time lag in months
+. 
+. *Post-merge data cleaning
+. **Dropping missing info**
+. keep if WRLURI18 != .
+(45,730 observations deleted)
+
+. drop if age < 18
+(0 observations deleted)
+
+. drop if age > 50
+(375,548 observations deleted)
+
+. replace rent=. if rent==0
+(476,228 real changes made, 476,228 to missing)
+
+. **Cleaning unmatched data
+. keep if sample != .
+(0 observations deleted)
+
+. keep if countyfip != 0
+(0 observations deleted)
+
+. 
+. **Dropping anyone with less than HS <- explanation: potentially removing cases o
+> f teen pregnancy**
+. describe educ
+
+Variable      Storage   Display    Value
+    name         type    format    label      Variable label
+----------------------------------------------------------------------------------
+educ            byte    %25.0g     educ_lbl   Educational attainment [general
+                                                version]
+
+. summarize educ, detail
+
+          Educational attainment [general version]
+-------------------------------------------------------------
+      Percentiles      Smallest
+ 1%            0              0
+ 5%            4              0
+10%            6              0       Obs             736,643
+25%            6              0       Sum of wgt.     736,643
+
+50%            7                      Mean           7.776952
+                        Largest       Std. dev.      2.380435
+75%           10             11
+90%           11             11       Variance       5.666471
+95%           11             11       Skewness      -.4642912
+99%           11             11       Kurtosis        3.16911
+
+. keep if educ > 4
+(37,642 observations deleted)
+
+. summarize educ, detail
+
+          Educational attainment [general version]
+-------------------------------------------------------------
+      Percentiles      Smallest
+ 1%            5              5
+ 5%            6              5
+10%            6              5       Obs             699,001
+25%            6              5       Sum of wgt.     699,001
+
+50%            7                      Mean           8.085057
+                        Largest       Std. dev.      2.000792
+75%           10             11
+90%           11             11       Variance        4.00317
+95%           11             11       Skewness       .2102581
+99%           11             11       Kurtosis       1.397108
+
+. reg incwage I.educd
+
+      Source |       SS           df       MS      Number of obs   =   699,001
+-------------+----------------------------------   F(10, 698990)   =  13914.55
+       Model |  5.0063e+14        10  5.0063e+13   Prob > F        =    0.0000
+    Residual |  2.5149e+15   698,990  3.5979e+09   R-squared       =    0.1660
+-------------+----------------------------------   Adj R-squared   =    0.1660
+       Total |  3.0155e+15   699,000  4.3141e+09   Root MSE        =     59983
+
+---------------------------------------------------------------------------------
+        incwage | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+----------------+----------------------------------------------------------------
+          educd |
+12th grade, ..  |   7779.348   692.8864    11.23   0.000     6421.313    9137.383
+Regular high..  |   12924.16     506.39    25.52   0.000     11931.65    13916.67
+GED or alter..  |   13535.42   618.8719    21.87   0.000     12322.45    14748.38
+Some college..  |   15788.61   549.5623    28.73   0.000     14711.49    16865.73
+1 or more ye..  |   16732.09   510.4562    32.78   0.000     15731.61    17732.56
+Associate's ..  |   26460.15   540.7966    48.93   0.000      25400.2    27520.09
+Bachelor's d..  |   52116.93   499.7137   104.29   0.000     51137.51    53096.35
+Master's deg..  |   72555.89   527.7793   137.47   0.000     71521.46    73590.32
+Professional..  |   123461.1   665.1129   185.62   0.000     122157.5    124764.7
+Doctoral deg..  |   95351.82   738.4553   129.12   0.000     93904.47    96799.17
+                |
+          _cons |   10488.67   479.5393    21.87   0.000     9548.792    11428.55
+---------------------------------------------------------------------------------
+
+. 
+. *Clean valueh
+. replace valueh = . if valueh >= 9999997 | valueh == 0 
+(290,848 real changes made, 290,848 to missing)
+
+. 
+. tab rent 
+
+       Monthly contract rent |      Freq.     Percent        Cum.
+-----------------------------+-----------------------------------
+                           4 |        100        0.04        0.04
+                       $1-19 |         46        0.02        0.06
+                          20 |         45        0.02        0.08
+                          30 |         85        0.04        0.11
+                          40 |         67        0.03        0.14
+                          50 |        129        0.05        0.19
+                          60 |         55        0.02        0.22
+                          70 |         53        0.02        0.24
+                          80 |         74        0.03        0.27
+            $80-99 (1960 1%) |         72        0.03        0.30
+                         100 |        195        0.08        0.38
+         $100-1999 (1960 1%) |         70        0.03        0.41
+                         120 |         94        0.04        0.45
+                         130 |        103        0.04        0.49
+                         140 |        112        0.05        0.54
+                         150 |        183        0.08        0.61
+                         160 |        116        0.05        0.66
+                         170 |         90        0.04        0.70
+                         180 |        120        0.05        0.75
+                         190 |        113        0.05        0.79
+                       $200+ |        346        0.14        0.94
+                         210 |         99        0.04        0.98
+                         220 |        197        0.08        1.06
+                         230 |        204        0.08        1.14
+                         240 |        119        0.05        1.19
+                         250 |        317        0.13        1.32
+                         260 |        127        0.05        1.38
+                         270 |        110        0.05        1.42
+                         280 |        143        0.06        1.48
+                         290 |        118        0.05        1.53
+                         300 |        711        0.29        1.82
+                         310 |         98        0.04        1.86
+                         320 |        133        0.05        1.92
+                         330 |        179        0.07        1.99
+                         340 |        108        0.04        2.04
+                         350 |        503        0.21        2.24
+                         360 |        138        0.06        2.30
+                         370 |        129        0.05        2.35
+                         380 |        222        0.09        2.45
+                         390 |        122        0.05        2.50
+                         400 |      1,333        0.55        3.05
+                         410 |        136        0.06        3.10
+                         420 |        171        0.07        3.17
+                         430 |        349        0.14        3.32
+                         440 |        167        0.07        3.39
+$400-499 ($400+ Puerto Rico) |      1,036        0.43        3.81
+                         460 |        207        0.09        3.90
+                         470 |        171        0.07        3.97
+                         480 |        467        0.19        4.16
+                         490 |        225        0.09        4.26
+                       $500+ |      2,939        1.21        5.47
+                         510 |        195        0.08        5.55
+                         520 |        268        0.11        5.66
+                         530 |        604        0.25        5.91
+                         540 |        287        0.12        6.03
+                         550 |      1,730        0.71        6.74
+                         560 |        316        0.13        6.87
+                         570 |        319        0.13        7.00
+                         580 |        769        0.32        7.32
+                         590 |        331        0.14        7.46
+                         600 |      3,626        1.50        8.96
+                         610 |        366        0.15        9.11
+                         620 |        452        0.19        9.29
+                         630 |      1,017        0.42        9.71
+                         640 |        519        0.21        9.93
+                         650 |      2,976        1.23       11.16
+                         660 |        438        0.18       11.34
+                         670 |        492        0.20       11.54
+                         680 |      1,297        0.54       12.08
+                         690 |        533        0.22       12.30
+                         700 |      4,318        1.78       14.08
+                         710 |        516        0.21       14.29
+                         720 |        674        0.28       14.57
+                         730 |      1,331        0.55       15.12
+                         740 |        626        0.26       15.38
+                         750 |      3,880        1.60       16.98
+                         760 |        669        0.28       17.26
+                         770 |        727        0.30       17.56
+                         780 |      1,493        0.62       18.17
+                         790 |        718        0.30       18.47
+                         800 |      5,893        2.43       20.90
+                         810 |        599        0.25       21.15
+                         820 |        739        0.31       21.45
+                         830 |      1,449        0.60       22.05
+                         840 |        824        0.34       22.39
+                         850 |      3,983        1.64       24.04
+                         860 |        794        0.33       24.37
+                         870 |        782        0.32       24.69
+                         880 |      1,602        0.66       25.35
+                         890 |        779        0.32       25.67
+                         900 |      5,567        2.30       27.97
+                         910 |        643        0.27       28.24
+                         920 |        814        0.34       28.57
+                         930 |      1,504        0.62       29.19
+                         940 |        775        0.32       29.51
+                         950 |      3,622        1.50       31.01
+                         960 |        810        0.33       31.34
+                         970 |        753        0.31       31.65
+                         980 |      1,849        0.76       32.42
+                         990 |        907        0.37       32.79
+                     $1,000+ |     11,209        4.63       37.42
+                        1100 |     13,824        5.71       43.13
+                        1200 |     16,212        6.69       49.82
+                        1300 |     14,500        5.99       55.81
+                        1400 |     13,309        5.49       61.30
+                        1500 |     13,670        5.64       66.95
+                        1600 |     10,263        4.24       71.18
+                        1700 |      9,001        3.72       74.90
+                        1800 |      9,040        3.73       78.63
+                        1900 |      6,280        2.59       81.22
+                        2000 |      7,583        3.13       84.35
+                        2100 |      4,210        1.74       86.09
+                        2200 |      4,246        1.75       87.85
+                        2300 |      3,327        1.37       89.22
+                        2400 |      3,214        1.33       90.55
+                        2500 |      3,588        1.48       92.03
+                        2600 |      2,152        0.89       92.92
+                        2700 |      2,131        0.88       93.80
+                        2800 |      2,114        0.87       94.67
+                        2900 |      1,392        0.57       95.24
+                        3000 |      2,386        0.99       96.23
+                        3100 |      1,483        0.61       96.84
+                        3200 |      1,115        0.46       97.30
+                        3300 |      1,575        0.65       97.95
+                        3400 |        730        0.30       98.25
+                        3500 |      1,176        0.49       98.74
+                        3600 |        634        0.26       99.00
+                        3700 |        882        0.36       99.36
+                        3800 |          9        0.00       99.37
+                        3900 |      1,494        0.62       99.99
+                        4000 |         36        0.01      100.00
+-----------------------------+-----------------------------------
+                       Total |    242,206      100.00
+
+. summarize rent
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+        rent |    242,206    1395.553    721.1091          4       4000
+
+. tab race
+
+          Race [general version] |      Freq.     Percent        Cum.
+---------------------------------+-----------------------------------
+                           White |    484,145       69.26       69.26
+    Black/African American/Negro |     77,173       11.04       80.30
+American Indian or Alaska Native |      4,578        0.65       80.96
+                         Chinese |     18,132        2.59       83.55
+                        Japanese |      1,796        0.26       83.81
+ Other Asian or Pacific Islander |     50,189        7.18       90.99
+                 Other race, nec |     37,941        5.43       96.42
+                 Two major races |     22,107        3.16       99.58
+       Three or more major races |      2,940        0.42      100.00
+---------------------------------+-----------------------------------
+                           Total |    699,001      100.00
+
+. tab educ
+
+   Educational attainment |
+        [general version] |      Freq.     Percent        Cum.
+--------------------------+-----------------------------------
+                 Grade 11 |     15,646        2.24        2.24
+                 Grade 12 |    223,732       32.01       34.25
+        1 year of college |    117,550       16.82       51.06
+       2 years of college |     57,564        8.24       59.30
+       4 years of college |    182,120       26.05       85.35
+      5+ years of college |    102,389       14.65      100.00
+--------------------------+-----------------------------------
+                    Total |    699,001      100.00
+
+. tab hispan
+
+    Hispanic |
+      Origin |      Freq.     Percent        Cum.
+-------------+-----------------------------------
+Not Hispanic |    560,661       80.21       80.21
+     Mexican |     86,529       12.38       92.59
+ Puerto Rico |     13,418        1.92       94.51
+       Cuban |      3,793        0.54       95.05
+       Other |     34,600        4.95      100.00
+-------------+-----------------------------------
+       Total |    699,001      100.00
+
+. ssc install outreg2
+checking outreg2 consistency and verifying not already installed...
+all files already exist and are up to date.
+
+. 
+. *Generating summary tables
+. summarize 
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+        year |    699,001        2019           0       2019       2019
+      sample |    699,001      201901           0     201901     201901
+      serial |    699,001    673736.4    435826.8         10    1425398
+    cbserial |    699,001    2.02e+12     2259058   2.02e+12   2.02e+12
+        hhwt |    699,001    1.090355    .8971847        .01      23.77
+-------------+---------------------------------------------------------
+     cluster |    699,001    2.02e+12     4358268   2.02e+12   2.02e+12
+    statefip |    699,001    26.34005    16.80023          1         55
+   countyfip |    699,001    85.23386    102.8546          1        810
+  cbsacode18 |    699,001     31283.3    10501.64      10420      49660
+        city |    699,001    863.2292     1843.43          0       7250
+-------------+---------------------------------------------------------
+     cityerr |    699,001     .626547     1.44711          0          5
+     citypop |    699,001     5840.95    18251.89          0      83987
+      strata |    699,001    492178.9      787430      10004    7030155
+          gq |    699,001    1.170284    .6706265          1          5
+    ownershp |    699,001    1.296206    .5730215          0          2
+-------------+---------------------------------------------------------
+   ownershpd |    699,001    15.29666    5.801684          0         22
+    mortgage |    699,001    1.516338    1.423669          0          4
+    proptx99 |    699,001    26.71166    27.27797          0         69
+        rent |    242,206    1395.553    721.1091          4       4000
+      valueh |    408,153    434506.6    520283.3       1000    7681000
+-------------+---------------------------------------------------------
+    bedrooms |    699,001    3.743286     1.46621          0          9
+  coupletype |    699,001    .8550446    .8589248          0          4
+      pernum |    699,001    1.881404    1.132178          1         20
+       perwt |    699,001    1.184152      .99429        .01      25.16
+      nchild |    699,001    .8143636    1.161443          0          9
+-------------+---------------------------------------------------------
+      nchlt5 |    699,001    .2059396    .5129044          0          8
+         age |    699,001    33.77031     9.53562         18         50
+       marst |    699,001    3.609772    2.379628          1          6
+        race |    699,001    2.151313    2.157222          1          9
+       raced |    699,001    217.8999    221.1414        100        990
+-------------+---------------------------------------------------------
+      hispan |    699,001    .3764573     .948514          0          4
+        educ |    699,001    8.085057    2.000792          5         11
+       educd |    699,001    83.09998    20.01819         50        116
+     incwage |    699,001    45549.73    65681.71          0     717000
+    incwelfr |    699,001    36.06237    506.8826          0      23000
+-------------+---------------------------------------------------------
+      LPPI18 |    699,001    8.919055    .8580381          4       13.5
+       CII18 |    699,001    3.469345     .599598          2          8
+      LPAI18 |    699,001    2.316289    .8632171          0         12
+      LZAI18 |    699,001    2.846887    .5844042          1          9
+       LAI18 |    699,001    .4403253    .2192922          0          1
+-------------+---------------------------------------------------------
+       SRI18 |    699,001    .1861377    .3980132          0          4
+       DRI18 |    699,001    2.098011    .6234981          0          4
+       OSI18 |    699,001    .6728164    .2105201          0          1
+        EI18 |    699,001    .6674672    .2798977          0          1
+       AHI18 |    699,001    .2367881    .2756413          0          1
+-------------+---------------------------------------------------------
+       ADI18 |    699,001    7.183644     3.06932   1.312375      18.25
+    WRLURI18 |    699,001    .3858587    .5675225  -1.314822   2.982143
+      _merge |    699,001           3           0          3          3
+
+. *tabout using summarystats.xls, cell(row col freq) format(2p 2p 0c) clab() layou
+> t(row) ptotal(single) replace
+. 
+end of do-file
+
+. do "C:\Users\gulle\AppData\Local\Temp\STD1fec_000000.tmp"
+
+. sum rent if rent > 0
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+        rent |    242,206    1395.553    721.1091          4       4000
+
+. 
+end of do-file
+
+. do "C:\Users\gulle\AppData\Local\Temp\STD1fec_000000.tmp"
+
+. sum rent if rent > 4
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+        rent |    242,106    1396.128    720.7031         10       4000
+
+. 
+end of do-file
+
+. do "C:\Users\gulle\AppData\Local\Temp\STD1fec_000000.tmp"
+
+. reg valueh WRLURI18 i.race i.educ i.hispan incwage i.statefip, robust beta
+
+Linear regression                               Number of obs     =    408,153
+                                                F(59, 408093)     =    1063.31
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.2044
+                                                Root MSE          =     4.6e+05
+
+---------------------------------------------------------------------------------
+                |               Robust
+         valueh | Coefficient  std. err.      t    P>|t|                     Beta
+----------------+----------------------------------------------------------------
+       WRLURI18 |   153819.4   1873.111    82.12   0.000                  .166083
+                |
+           race |
+Black/Africa..  |   -82861.8   2217.881   -37.36   0.000                -.0423062
+American Ind..  |   -19406.4   17295.05    -1.12   0.262                -.0027812
+       Chinese  |   158066.6   7071.442    22.35   0.000                 .0496787
+      Japanese  |   79545.04   23904.53     3.33   0.001                 .0070024
+Other Asian ..  |   13933.53   3432.366     4.06   0.000                 .0069406
+Other race, ..  |  -28355.73   3528.422    -8.04   0.000                -.0109486
+Two major ra..  |  -5125.921   4611.411    -1.11   0.266                -.0016084
+Three or mor..  |  -10440.74   12602.12    -0.83   0.407                -.0012103
+                |
+           educ |
+      Grade 12  |  -77901.17   5974.394   -13.04   0.000                -.0677157
+1 year of co..  |  -55627.22   6100.595    -9.12   0.000                -.0376001
+2 years of c..  |  -79201.33   6199.346   -12.78   0.000                -.0435472
+4 years of c..  |   10635.68   6120.594     1.74   0.082                 .0092493
+5+ years of ..  |   49928.76   6417.764     7.78   0.000                 .0363137
+                |
+         hispan |
+       Mexican  |  -146029.9   2551.271   -57.24   0.000                -.0886832
+   Puerto Rico  |  -55953.41   5084.824   -11.00   0.000                -.0130593
+         Cuban  |   3937.484   9368.748     0.42   0.674                 .0005514
+         Other  |  -40395.43   4035.576   -10.01   0.000                -.0151594
+                |
+        incwage |    1.08126   .0211048    51.23   0.000                 .1554084
+                |
+       statefip |
+       arizona  |   40.78722   5403.347     0.01   0.994                 .0000135
+      arkansas  |   43304.76   7111.058     6.09   0.000                 .0058768
+    california  |   377020.7   5593.084    67.41   0.000                 .2788596
+      colorado  |   156495.9   13588.32    11.52   0.000                 .0131366
+   connecticut  |     131174   7182.843    18.26   0.000                 .0338566
+      delaware  |  -17622.41   7099.445    -2.48   0.013                 -.002406
+district of ..  |   329410.9   16891.68    19.50   0.000                 .0370173
+       florida  |   27951.33   5111.337     5.47   0.000                 .0137036
+       georgia  |   63403.62   5321.449    11.91   0.000                 .0182216
+      illinois  |   96452.12   5192.582    18.57   0.000                 .0411511
+       indiana  |   -76388.1   5568.868   -13.72   0.000                -.0161281
+          iowa  |  -53376.53   13585.73    -3.93   0.000                -.0025984
+        kansas  |   9538.861    7902.67     1.21   0.227                 .0012095
+      kentucky  |    27883.6   6579.715     4.24   0.000                 .0043835
+     louisiana  |    28628.1   8474.065     3.38   0.001                 .0047156
+         maine  |  -34930.77   7223.098    -4.84   0.000                -.0024223
+      maryland  |  -11432.59   5870.519    -1.95   0.051                -.0038496
+ massachusetts  |   385525.4   21216.58    18.17   0.000                 .0401859
+      michigan  |   40937.46   4998.933     8.19   0.000                 .0147218
+     minnesota  |   64911.72   5929.252    10.95   0.000                 .0134556
+   mississippi  |  -74821.77   9206.536    -8.13   0.000                -.0074014
+      missouri  |   40178.96   5555.622     7.23   0.000                 .0093852
+      nebraska  |   22213.81   7248.757     3.06   0.002                 .0025228
+        nevada  |   5737.921   11009.03     0.52   0.602                 .0005512
+    new jersey  |   16128.81   5636.198     2.86   0.004                 .0067126
+    new mexico  |   311158.8    55161.5     5.64   0.000                 .0272799
+      new york  |   197475.4   6241.185    31.64   0.000                 .0962208
+north carolina  |   52270.68   5269.998     9.92   0.000                 .0161742
+          ohio  |   2658.598   4949.404     0.54   0.591                 .0009541
+      oklahoma  |  -723.5225   7692.617    -0.09   0.925                -.0000892
+        oregon  |     106167   6394.395    16.60   0.000                 .0242498
+  pennsylvania  |  -39713.07   4990.672    -7.96   0.000                -.0155674
+  rhode island  |  -83094.19   8036.296   -10.34   0.000                 -.011169
+south carolina  |   52949.13   6638.386     7.98   0.000                 .0080486
+     tennessee  |   39487.08    6020.61     6.56   0.000                 .0094006
+         texas  |   51956.97   4900.418    10.60   0.000                 .0318899
+          utah  |   50077.74   6403.378     7.82   0.000                 .0126619
+      virginia  |   151896.5   6468.349    23.48   0.000                 .0355662
+    washington  |   187262.7    5939.19    31.53   0.000                 .0653847
+     wisconsin  |  -13214.05   5906.737    -2.24   0.025                -.0023737
+                |
+          _cons |   251929.3   7414.097    33.98   0.000                        .
+---------------------------------------------------------------------------------
+
+. reg rent WRLURI18 i.race i.educ i.hispan incwage i.statefip, robust beta
+
+Linear regression                               Number of obs     =    242,206
+                                                F(59, 242146)     =    2076.75
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.3630
+                                                Root MSE          =     575.62
+
+---------------------------------------------------------------------------------
+                |               Robust
+           rent | Coefficient  std. err.      t    P>|t|                     Beta
+----------------+----------------------------------------------------------------
+       WRLURI18 |    286.875   3.604057    79.60   0.000                 .2211594
+                |
+           race |
+Black/Africa..  |  -206.9197   3.167448   -65.33   0.000                -.1026207
+American Ind..  |  -188.8119     14.176   -13.32   0.000                -.0216086
+       Chinese  |   66.39937   10.19376     6.51   0.000                 .0136414
+      Japanese  |    226.259   27.94496     8.10   0.000                 .0183141
+Other Asian ..  |   .9098875   5.083534     0.18   0.858                  .000332
+Other race, ..  |  -48.66245   4.786585   -10.17   0.000                -.0179949
+Two major ra..  |  -30.27733   6.374813    -4.75   0.000                -.0080019
+Three or mor..  |  -25.49015   18.42267    -1.38   0.166                -.0024582
+                |
+           educ |
+      Grade 12  |   32.75928   7.000864     4.68   0.000                 .0214859
+1 year of co..  |   114.7781   7.310017    15.70   0.000                 .0607229
+2 years of c..  |   100.0059   7.800419    12.82   0.000                  .037376
+4 years of c..  |   296.8866   7.425975    39.98   0.000                 .1797323
+5+ years of ..  |   367.6033   8.120926    45.27   0.000                 .1689433
+                |
+         hispan |
+       Mexican  |  -184.3249   3.917424   -47.05   0.000                  -.09084
+   Puerto Rico  |   -158.368   6.971257   -22.72   0.000                -.0350235
+         Cuban  |  -36.94707   15.21043    -2.43   0.015                  -.00388
+         Other  |  -89.85051   5.114926   -17.57   0.000                 -.030859
+                |
+        incwage |   .0025477   .0000414    61.59   0.000                 .1752522
+                |
+       statefip |
+       arizona  |   92.14198   11.99781     7.68   0.000                 .0218942
+      arkansas  |   104.4162   15.76871     6.62   0.000                 .0094226
+    california  |    666.785   11.38184    58.58   0.000                 .4022371
+      colorado  |   372.9476   20.12588    18.53   0.000                 .0244831
+   connecticut  |   418.2633   14.10659    29.65   0.000                 .0693755
+      delaware  |   141.7872   17.14264     8.27   0.000                 .0117496
+district of ..  |   780.8637   20.75084    37.63   0.000                 .0960048
+       florida  |   308.6884   11.31853    27.27   0.000                 .1070901
+       georgia  |    323.736   12.81817    25.26   0.000                 .0533039
+      illinois  |   391.3536   11.98271    32.66   0.000                 .1072118
+       indiana  |   -86.4594   13.53583    -6.39   0.000                 -.012519
+          iowa  |    149.649   49.22889     3.04   0.002                 .0056238
+        kansas  |   94.91181   17.82094     5.33   0.000                 .0077423
+      kentucky  |   89.70499    14.7938     6.06   0.000                 .0087308
+     louisiana  |   138.6217   16.40591     8.45   0.000                 .0163042
+         maine  |    65.4854   29.28325     2.24   0.025                 .0026728
+      maryland  |   336.4529    13.8752    24.25   0.000                 .0685676
+ massachusetts  |   896.2591   18.66582    48.02   0.000                 .1255452
+      michigan  |   189.3036   12.09753    15.65   0.000                 .0385404
+     minnesota  |   365.4595     16.365    22.33   0.000                 .0448391
+   mississippi  |   -10.8334   17.88468    -0.61   0.545                -.0006832
+      missouri  |   127.4829   13.32551     9.57   0.000                  .018646
+      nebraska  |   155.0123   17.38847     8.91   0.000                  .011482
+        nevada  |   92.23023   21.96969     4.20   0.000                 .0069438
+    new jersey  |   366.1272   12.91073    28.36   0.000                 .0972589
+    new mexico  |  -65.00351   31.38237    -2.07   0.038                -.0030467
+      new york  |   494.4583   12.03028    41.10   0.000                 .2027472
+north carolina  |   185.5035   11.78037    15.75   0.000                 .0419318
+          ohio  |   101.8168   11.68482     8.71   0.000                 .0251114
+      oklahoma  |   59.05289   15.27247     3.87   0.000                 .0053005
+        oregon  |   275.9595   13.41337    20.57   0.000                 .0467801
+  pennsylvania  |   91.68823   12.18851     7.52   0.000                 .0214085
+  rhode island  |  -49.85793   17.72258    -2.81   0.005                -.0044467
+south carolina  |   133.1424   15.44322     8.62   0.000                  .011595
+     tennessee  |    158.563   13.19655    12.02   0.000                 .0262744
+         texas  |   275.8004   11.04523    24.97   0.000                  .120526
+          utah  |   36.89048   14.24629     2.59   0.010                 .0054483
+      virginia  |   553.2551   13.92801    39.72   0.000                 .0958604
+    washington  |   486.9163   12.54657    38.81   0.000                 .1195092
+     wisconsin  |   16.70284   14.21178     1.18   0.240                 .0019894
+                |
+          _cons |    694.703   12.65843    54.88   0.000                        .
+---------------------------------------------------------------------------------
+
+. 
+end of do-file
+
+. do "C:\Users\gulle\AppData\Local\Temp\STD1fec_000000.tmp"
+
+. reg valueh LPPI18 CII18 LPAI18 LZAI18 LAI18 SRI18 DRI18 OSI18 EI18 AHI18 ADI18 i
+> .race i.educ i.hispan incwage i.statefip, robust beta
+
+Linear regression                               Number of obs     =    408,153
+                                                F(69, 408083)     =     968.90
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.2268
+                                                Root MSE          =     4.6e+05
+
+---------------------------------------------------------------------------------
+                |               Robust
+         valueh | Coefficient  std. err.      t    P>|t|                     Beta
+----------------+----------------------------------------------------------------
+         LPPI18 |   24709.53   1023.835    24.13   0.000                 .0407922
+          CII18 |  -29088.22   1652.999   -17.60   0.000                -.0334151
+         LPAI18 |  -32802.66   2007.416   -16.34   0.000                -.0532135
+         LZAI18 |   40945.99   1913.691    21.40   0.000                 .0441816
+          LAI18 |   17024.95   4149.708     4.10   0.000                 .0070919
+          SRI18 |  -54107.09   2567.716   -21.07   0.000                -.0397125
+          DRI18 |   2035.996   1440.562     1.41   0.158                 .0024224
+          OSI18 |  -18588.24   3811.226    -4.88   0.000                -.0075698
+           EI18 |   887.0047   3202.125     0.28   0.782                 .0004804
+          AHI18 |   359158.4   6091.327    58.96   0.000                 .1834448
+          ADI18 |   29260.27    473.518    61.79   0.000                 .1708369
+                |
+           race |
+Black/Africa..  |  -91758.08   2200.787   -41.69   0.000                -.0468484
+American Ind..  |  -7267.077   18076.53    -0.40   0.688                -.0010415
+       Chinese  |   118524.7   6962.198    17.02   0.000                 .0372511
+      Japanese  |   65103.45   23664.58     2.75   0.006                 .0057311
+Other Asian ..  |  -2926.515   3379.135    -0.87   0.386                -.0014578
+Other race, ..  |  -29964.91   3503.421    -8.55   0.000                -.0115699
+Two major ra..  |  -10542.91   4525.642    -2.33   0.020                -.0033081
+Three or mor..  |  -16385.14   12344.46    -1.33   0.184                -.0018993
+                |
+           educ |
+      Grade 12  |  -75737.14   5951.326   -12.73   0.000                -.0658346
+1 year of co..  |  -54776.58   6074.609    -9.02   0.000                -.0370252
+2 years of c..  |  -74990.95    6173.22   -12.15   0.000                -.0412322
+4 years of c..  |   6439.777   6088.159     1.06   0.290                 .0056004
+5+ years of ..  |   44327.46    6377.47     6.95   0.000                 .0322398
+                |
+         hispan |
+       Mexican  |  -133001.6   2540.098   -52.36   0.000                -.0807712
+   Puerto Rico  |   -65574.1    5046.76   -12.99   0.000                -.0153048
+         Cuban  |  -3071.285   9313.464    -0.33   0.742                -.0004301
+         Other  |  -56752.96   4001.785   -14.18   0.000                 -.021298
+                |
+        incwage |   1.020672   .0208967    48.84   0.000                 .1467002
+                |
+       statefip |
+       arizona  |  -14531.79   6072.608    -2.39   0.017                -.0048005
+      arkansas  |  -91388.56   7002.036   -13.05   0.000                -.0124021
+    california  |   232445.6   6463.778    35.96   0.000                  .171926
+      colorado  |    22750.1   14430.78     1.58   0.115                 .0019097
+   connecticut  |   113572.8   7672.521    14.80   0.000                 .0293137
+      delaware  |  -148674.6   8087.837   -18.38   0.000                -.0202986
+district of ..  |   129401.6    17503.1     7.39   0.000                 .0145414
+       florida  |   16910.41   5450.528     3.10   0.002                 .0082906
+       georgia  |   70118.33   5424.747    12.93   0.000                 .0201514
+      illinois  |   25664.45    5447.54     4.71   0.000                 .0109497
+       indiana  |  -74927.21   5671.277   -13.21   0.000                -.0158196
+          iowa  |  -343116.7   15673.18   -21.89   0.000                -.0167033
+        kansas  |   42900.78   8069.237     5.32   0.000                 .0054395
+      kentucky  |   21500.54    6951.85     3.09   0.002                   .00338
+     louisiana  |   62297.49    8201.27     7.60   0.000                 .0102615
+         maine  |  -83920.17   7428.488   -11.30   0.000                -.0058195
+      maryland  |  -117197.7   7307.676   -16.04   0.000                -.0394631
+ massachusetts  |   249306.4   21335.45    11.69   0.000                 .0259869
+      michigan  |  -18625.87   5092.865    -3.66   0.000                -.0066982
+     minnesota  |    88019.6    6212.04    14.17   0.000                 .0182456
+   mississippi  |   9986.207   9614.504     1.04   0.299                 .0009878
+      missouri  |   3835.566   5518.174     0.70   0.487                 .0008959
+      nebraska  |  -34174.87   7327.794    -4.66   0.000                -.0038812
+        nevada  |   96435.37   11288.76     8.54   0.000                 .0092633
+    new jersey  |  -193210.1   6552.553   -29.49   0.000                -.0804115
+    new mexico  |   430149.3   56069.78     7.67   0.000                  .037712
+      new york  |   17838.43   6692.025     2.67   0.008                 .0086919
+north carolina  |   33561.36   5792.163     5.79   0.000                 .0103849
+          ohio  |  -52896.93   5106.238   -10.36   0.000                -.0189825
+      oklahoma  |  -30847.96   7880.454    -3.91   0.000                -.0038039
+        oregon  |   72675.83   7101.521    10.23   0.000                    .0166
+  pennsylvania  |  -85115.07   5348.481   -15.91   0.000                -.0333648
+  rhode island  |  -295228.4    9199.48   -32.09   0.000                -.0396829
+south carolina  |   29730.79   6776.267     4.39   0.000                 .0045193
+     tennessee  |   113085.9   6038.216    18.73   0.000                 .0269221
+         texas  |   60580.52   5144.471    11.78   0.000                 .0371828
+          utah  |   148598.2   6649.616    22.35   0.000                 .0375723
+      virginia  |   70094.95   7074.109     9.91   0.000                 .0164126
+    washington  |   152191.2   6620.565    22.99   0.000                 .0531391
+     wisconsin  |  -4561.323    6029.98    -0.76   0.449                -.0008194
+                |
+          _cons |  -53706.88   10923.69    -4.92   0.000                        .
+---------------------------------------------------------------------------------
+
+. reg rent LPPI18 CII18 LPAI18 LZAI18 LAI18 SRI18 DRI18 OSI18 EI18 AHI18 ADI18 i.r
+> ace i.educ i.hispan incwage i.statefip, robust beta
+
+Linear regression                               Number of obs     =    242,206
+                                                F(69, 242136)     =    1976.00
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.3930
+                                                Root MSE          =      561.9
+
+---------------------------------------------------------------------------------
+                |               Robust
+           rent | Coefficient  std. err.      t    P>|t|                     Beta
+----------------+----------------------------------------------------------------
+         LPPI18 |   48.06812   1.940218    24.77   0.000                 .0553519
+          CII18 |  -32.50536   2.754887   -11.80   0.000                -.0260999
+         LPAI18 |  -60.08185   2.732789   -21.99   0.000                -.0699032
+         LZAI18 |   65.73174   3.306355    19.88   0.000                 .0524752
+          LAI18 |  -20.54889    8.26354    -2.49   0.013                -.0062024
+          SRI18 |  -81.31189   3.548205   -22.92   0.000                -.0466782
+          DRI18 |   40.57856   2.802469    14.48   0.000                 .0345072
+          OSI18 |  -31.93817   7.177709    -4.45   0.000                -.0089879
+           EI18 |   82.18511   7.143262    11.51   0.000                 .0308298
+          AHI18 |   428.2301   8.823319    48.53   0.000                 .1701992
+          ADI18 |   58.56397   .9286149    63.07   0.000                 .2486797
+                |
+           race |
+Black/Africa..  |  -211.8491   3.112844   -68.06   0.000                -.1050654
+American Ind..  |  -197.5599   14.18948   -13.92   0.000                -.0226098
+       Chinese  |   35.19444   10.06289     3.50   0.000                 .0072305
+      Japanese  |    204.573    27.5498     7.43   0.000                 .0165587
+Other Asian ..  |  -13.01959   4.907547    -2.65   0.008                -.0047504
+Other race, ..  |  -58.42923    4.64952   -12.57   0.000                -.0216065
+Two major ra..  |  -29.55781   6.209765    -4.76   0.000                -.0078117
+Three or mor..  |   -25.0281   18.07911    -1.38   0.166                -.0024136
+                |
+           educ |
+      Grade 12  |   29.90636     6.8283     4.38   0.000                 .0196148
+1 year of co..  |   106.9104   7.133858    14.99   0.000                 .0565605
+2 years of c..  |   95.62748   7.606928    12.57   0.000                 .0357396
+4 years of c..  |   275.2369   7.246122    37.98   0.000                 .1666258
+5+ years of ..  |    339.083   7.924446    42.79   0.000                 .1558359
+                |
+         hispan |
+       Mexican  |  -165.6101      3.797   -43.62   0.000                -.0816169
+   Puerto Rico  |  -169.4506   6.922421   -24.48   0.000                -.0374744
+         Cuban  |  -40.71935   14.92057    -2.73   0.006                -.0042761
+         Other  |  -107.1881   5.050841   -21.22   0.000                -.0368136
+                |
+        incwage |   .0023621   .0000403    58.54   0.000                 .1624834
+                |
+       statefip |
+       arizona  |  -39.40096    13.2737    -2.97   0.003                -.0093622
+      arkansas  |  -171.1184    16.0199   -10.68   0.000                -.0154418
+    california  |    357.932   12.54723    28.53   0.000                  .215922
+      colorado  |   45.77612   22.10136     2.07   0.038                 .0030051
+   connecticut  |   351.0354   14.89539    23.57   0.000                 .0582247
+      delaware  |  -162.6591   18.93105    -8.59   0.000                -.0134793
+district of ..  |   411.4137   22.59975    18.20   0.000                 .0505821
+       florida  |   201.2041   11.91435    16.89   0.000                 .0698017
+       georgia  |   291.4279   12.85261    22.67   0.000                 .0479843
+      illinois  |   252.2428   12.16294    20.74   0.000                 .0691022
+       indiana  |   -28.2483   13.57341    -2.08   0.037                -.0040902
+          iowa  |   -150.615    50.2594    -3.00   0.003                -.0056601
+        kansas  |   66.40494   18.54217     3.58   0.000                 .0054169
+      kentucky  |   130.5204   15.49302     8.42   0.000                 .0127033
+     louisiana  |    131.459    15.4273     8.52   0.000                 .0154617
+         maine  |  -68.52269   28.90437    -2.37   0.018                -.0027968
+      maryland  |   130.0095   16.33194     7.96   0.000                 .0264954
+ massachusetts  |   686.4842   18.96282    36.20   0.000                 .0961606
+      michigan  |   42.76602   12.25354     3.49   0.000                 .0087068
+     minnesota  |   361.0965   16.60733    21.74   0.000                 .0443038
+   mississippi  |   105.3125   19.11585     5.51   0.000                 .0066418
+      missouri  |   84.09441   13.19484     6.37   0.000                 .0122999
+      nebraska  |   8.789567   17.38579     0.51   0.613                 .0006511
+        nevada  |   161.8417   22.70195     7.13   0.000                 .0121846
+    new jersey  |   12.20113   13.53659     0.90   0.367                 .0032411
+    new mexico  |  -289.1934   51.19087    -5.65   0.000                -.0135546
+      new york  |   177.6231   12.46546    14.25   0.000                 .0728324
+north carolina  |   153.2907   12.78541    11.99   0.000                 .0346503
+          ohio  |  -26.83816   11.89152    -2.26   0.024                -.0066192
+      oklahoma  |  -94.70159   15.45594    -6.13   0.000                -.0085003
+        oregon  |   152.6143   14.80601    10.31   0.000                 .0258709
+  pennsylvania  |  -58.24169   12.82908    -4.54   0.000                 -.013599
+  rhode island  |  -389.7715   18.42955   -21.15   0.000                -.0347626
+south carolina  |   112.5484   15.65081     7.19   0.000                 .0098015
+     tennessee  |   232.6134   13.20595    17.61   0.000                 .0385447
+         texas  |   255.0971   11.16196    22.85   0.000                 .1114785
+          utah  |   124.4579   15.07675     8.25   0.000                  .018381
+      virginia  |   387.2482   14.81557    26.14   0.000                  .067097
+    washington  |   361.8216   13.84142    26.14   0.000                 .0888059
+     wisconsin  |   6.711552   14.16037     0.47   0.636                 .0007994
+                |
+          _cons |   5.223872   20.51682     0.25   0.799                        .
+---------------------------------------------------------------------------------
+
+. 
+end of do-file
+
+. do "C:\Users\gulle\AppData\Local\Temp\STD1fec_000000.tmp"
+
+. reg valueh LPPI18 CII18 LPAI18 LZAI18 LAI18 SRI18 DRI18 OSI18 EI18 AHI18 ADI18 i
+> .race i.educ i.hispan incwage i.statefip, robust beta
+
+Linear regression                               Number of obs     =    408,153
+                                                F(69, 408083)     =     968.90
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.2268
+                                                Root MSE          =     4.6e+05
+
+---------------------------------------------------------------------------------
+                |               Robust
+         valueh | Coefficient  std. err.      t    P>|t|                     Beta
+----------------+----------------------------------------------------------------
+         LPPI18 |   24709.53   1023.835    24.13   0.000                 .0407922
+          CII18 |  -29088.22   1652.999   -17.60   0.000                -.0334151
+         LPAI18 |  -32802.66   2007.416   -16.34   0.000                -.0532135
+         LZAI18 |   40945.99   1913.691    21.40   0.000                 .0441816
+          LAI18 |   17024.95   4149.708     4.10   0.000                 .0070919
+          SRI18 |  -54107.09   2567.716   -21.07   0.000                -.0397125
+          DRI18 |   2035.996   1440.562     1.41   0.158                 .0024224
+          OSI18 |  -18588.24   3811.226    -4.88   0.000                -.0075698
+           EI18 |   887.0047   3202.125     0.28   0.782                 .0004804
+          AHI18 |   359158.4   6091.327    58.96   0.000                 .1834448
+          ADI18 |   29260.27    473.518    61.79   0.000                 .1708369
+                |
+           race |
+Black/Africa..  |  -91758.08   2200.787   -41.69   0.000                -.0468484
+American Ind..  |  -7267.077   18076.53    -0.40   0.688                -.0010415
+       Chinese  |   118524.7   6962.198    17.02   0.000                 .0372511
+      Japanese  |   65103.45   23664.58     2.75   0.006                 .0057311
+Other Asian ..  |  -2926.515   3379.135    -0.87   0.386                -.0014578
+Other race, ..  |  -29964.91   3503.421    -8.55   0.000                -.0115699
+Two major ra..  |  -10542.91   4525.642    -2.33   0.020                -.0033081
+Three or mor..  |  -16385.14   12344.46    -1.33   0.184                -.0018993
+                |
+           educ |
+      Grade 12  |  -75737.14   5951.326   -12.73   0.000                -.0658346
+1 year of co..  |  -54776.58   6074.609    -9.02   0.000                -.0370252
+2 years of c..  |  -74990.95    6173.22   -12.15   0.000                -.0412322
+4 years of c..  |   6439.777   6088.159     1.06   0.290                 .0056004
+5+ years of ..  |   44327.46    6377.47     6.95   0.000                 .0322398
+                |
+         hispan |
+       Mexican  |  -133001.6   2540.098   -52.36   0.000                -.0807712
+   Puerto Rico  |   -65574.1    5046.76   -12.99   0.000                -.0153048
+         Cuban  |  -3071.285   9313.464    -0.33   0.742                -.0004301
+         Other  |  -56752.96   4001.785   -14.18   0.000                 -.021298
+                |
+        incwage |   1.020672   .0208967    48.84   0.000                 .1467002
+                |
+       statefip |
+       arizona  |  -14531.79   6072.608    -2.39   0.017                -.0048005
+      arkansas  |  -91388.56   7002.036   -13.05   0.000                -.0124021
+    california  |   232445.6   6463.778    35.96   0.000                  .171926
+      colorado  |    22750.1   14430.78     1.58   0.115                 .0019097
+   connecticut  |   113572.8   7672.521    14.80   0.000                 .0293137
+      delaware  |  -148674.6   8087.837   -18.38   0.000                -.0202986
+district of ..  |   129401.6    17503.1     7.39   0.000                 .0145414
+       florida  |   16910.41   5450.528     3.10   0.002                 .0082906
+       georgia  |   70118.33   5424.747    12.93   0.000                 .0201514
+      illinois  |   25664.45    5447.54     4.71   0.000                 .0109497
+       indiana  |  -74927.21   5671.277   -13.21   0.000                -.0158196
+          iowa  |  -343116.7   15673.18   -21.89   0.000                -.0167033
+        kansas  |   42900.78   8069.237     5.32   0.000                 .0054395
+      kentucky  |   21500.54    6951.85     3.09   0.002                   .00338
+     louisiana  |   62297.49    8201.27     7.60   0.000                 .0102615
+         maine  |  -83920.17   7428.488   -11.30   0.000                -.0058195
+      maryland  |  -117197.7   7307.676   -16.04   0.000                -.0394631
+ massachusetts  |   249306.4   21335.45    11.69   0.000                 .0259869
+      michigan  |  -18625.87   5092.865    -3.66   0.000                -.0066982
+     minnesota  |    88019.6    6212.04    14.17   0.000                 .0182456
+   mississippi  |   9986.207   9614.504     1.04   0.299                 .0009878
+      missouri  |   3835.566   5518.174     0.70   0.487                 .0008959
+      nebraska  |  -34174.87   7327.794    -4.66   0.000                -.0038812
+        nevada  |   96435.37   11288.76     8.54   0.000                 .0092633
+    new jersey  |  -193210.1   6552.553   -29.49   0.000                -.0804115
+    new mexico  |   430149.3   56069.78     7.67   0.000                  .037712
+      new york  |   17838.43   6692.025     2.67   0.008                 .0086919
+north carolina  |   33561.36   5792.163     5.79   0.000                 .0103849
+          ohio  |  -52896.93   5106.238   -10.36   0.000                -.0189825
+      oklahoma  |  -30847.96   7880.454    -3.91   0.000                -.0038039
+        oregon  |   72675.83   7101.521    10.23   0.000                    .0166
+  pennsylvania  |  -85115.07   5348.481   -15.91   0.000                -.0333648
+  rhode island  |  -295228.4    9199.48   -32.09   0.000                -.0396829
+south carolina  |   29730.79   6776.267     4.39   0.000                 .0045193
+     tennessee  |   113085.9   6038.216    18.73   0.000                 .0269221
+         texas  |   60580.52   5144.471    11.78   0.000                 .0371828
+          utah  |   148598.2   6649.616    22.35   0.000                 .0375723
+      virginia  |   70094.95   7074.109     9.91   0.000                 .0164126
+    washington  |   152191.2   6620.565    22.99   0.000                 .0531391
+     wisconsin  |  -4561.323    6029.98    -0.76   0.449                -.0008194
+                |
+          _cons |  -53706.88   10923.69    -4.92   0.000                        .
+---------------------------------------------------------------------------------
+
+. outreg2 using ols_valueh, word
+ols_valueh.rtf
+dir : seeout
+
+. reg rent LPPI18 CII18 LPAI18 LZAI18 LAI18 SRI18 DRI18 OSI18 EI18 AHI18 ADI18 i.r
+> ace i.educ i.hispan incwage i.statefip, robust beta
+
+Linear regression                               Number of obs     =    242,206
+                                                F(69, 242136)     =    1976.00
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.3930
+                                                Root MSE          =      561.9
+
+---------------------------------------------------------------------------------
+                |               Robust
+           rent | Coefficient  std. err.      t    P>|t|                     Beta
+----------------+----------------------------------------------------------------
+         LPPI18 |   48.06812   1.940218    24.77   0.000                 .0553519
+          CII18 |  -32.50536   2.754887   -11.80   0.000                -.0260999
+         LPAI18 |  -60.08185   2.732789   -21.99   0.000                -.0699032
+         LZAI18 |   65.73174   3.306355    19.88   0.000                 .0524752
+          LAI18 |  -20.54889    8.26354    -2.49   0.013                -.0062024
+          SRI18 |  -81.31189   3.548205   -22.92   0.000                -.0466782
+          DRI18 |   40.57856   2.802469    14.48   0.000                 .0345072
+          OSI18 |  -31.93817   7.177709    -4.45   0.000                -.0089879
+           EI18 |   82.18511   7.143262    11.51   0.000                 .0308298
+          AHI18 |   428.2301   8.823319    48.53   0.000                 .1701992
+          ADI18 |   58.56397   .9286149    63.07   0.000                 .2486797
+                |
+           race |
+Black/Africa..  |  -211.8491   3.112844   -68.06   0.000                -.1050654
+American Ind..  |  -197.5599   14.18948   -13.92   0.000                -.0226098
+       Chinese  |   35.19444   10.06289     3.50   0.000                 .0072305
+      Japanese  |    204.573    27.5498     7.43   0.000                 .0165587
+Other Asian ..  |  -13.01959   4.907547    -2.65   0.008                -.0047504
+Other race, ..  |  -58.42923    4.64952   -12.57   0.000                -.0216065
+Two major ra..  |  -29.55781   6.209765    -4.76   0.000                -.0078117
+Three or mor..  |   -25.0281   18.07911    -1.38   0.166                -.0024136
+                |
+           educ |
+      Grade 12  |   29.90636     6.8283     4.38   0.000                 .0196148
+1 year of co..  |   106.9104   7.133858    14.99   0.000                 .0565605
+2 years of c..  |   95.62748   7.606928    12.57   0.000                 .0357396
+4 years of c..  |   275.2369   7.246122    37.98   0.000                 .1666258
+5+ years of ..  |    339.083   7.924446    42.79   0.000                 .1558359
+                |
+         hispan |
+       Mexican  |  -165.6101      3.797   -43.62   0.000                -.0816169
+   Puerto Rico  |  -169.4506   6.922421   -24.48   0.000                -.0374744
+         Cuban  |  -40.71935   14.92057    -2.73   0.006                -.0042761
+         Other  |  -107.1881   5.050841   -21.22   0.000                -.0368136
+                |
+        incwage |   .0023621   .0000403    58.54   0.000                 .1624834
+                |
+       statefip |
+       arizona  |  -39.40096    13.2737    -2.97   0.003                -.0093622
+      arkansas  |  -171.1184    16.0199   -10.68   0.000                -.0154418
+    california  |    357.932   12.54723    28.53   0.000                  .215922
+      colorado  |   45.77612   22.10136     2.07   0.038                 .0030051
+   connecticut  |   351.0354   14.89539    23.57   0.000                 .0582247
+      delaware  |  -162.6591   18.93105    -8.59   0.000                -.0134793
+district of ..  |   411.4137   22.59975    18.20   0.000                 .0505821
+       florida  |   201.2041   11.91435    16.89   0.000                 .0698017
+       georgia  |   291.4279   12.85261    22.67   0.000                 .0479843
+      illinois  |   252.2428   12.16294    20.74   0.000                 .0691022
+       indiana  |   -28.2483   13.57341    -2.08   0.037                -.0040902
+          iowa  |   -150.615    50.2594    -3.00   0.003                -.0056601
+        kansas  |   66.40494   18.54217     3.58   0.000                 .0054169
+      kentucky  |   130.5204   15.49302     8.42   0.000                 .0127033
+     louisiana  |    131.459    15.4273     8.52   0.000                 .0154617
+         maine  |  -68.52269   28.90437    -2.37   0.018                -.0027968
+      maryland  |   130.0095   16.33194     7.96   0.000                 .0264954
+ massachusetts  |   686.4842   18.96282    36.20   0.000                 .0961606
+      michigan  |   42.76602   12.25354     3.49   0.000                 .0087068
+     minnesota  |   361.0965   16.60733    21.74   0.000                 .0443038
+   mississippi  |   105.3125   19.11585     5.51   0.000                 .0066418
+      missouri  |   84.09441   13.19484     6.37   0.000                 .0122999
+      nebraska  |   8.789567   17.38579     0.51   0.613                 .0006511
+        nevada  |   161.8417   22.70195     7.13   0.000                 .0121846
+    new jersey  |   12.20113   13.53659     0.90   0.367                 .0032411
+    new mexico  |  -289.1934   51.19087    -5.65   0.000                -.0135546
+      new york  |   177.6231   12.46546    14.25   0.000                 .0728324
+north carolina  |   153.2907   12.78541    11.99   0.000                 .0346503
+          ohio  |  -26.83816   11.89152    -2.26   0.024                -.0066192
+      oklahoma  |  -94.70159   15.45594    -6.13   0.000                -.0085003
+        oregon  |   152.6143   14.80601    10.31   0.000                 .0258709
+  pennsylvania  |  -58.24169   12.82908    -4.54   0.000                 -.013599
+  rhode island  |  -389.7715   18.42955   -21.15   0.000                -.0347626
+south carolina  |   112.5484   15.65081     7.19   0.000                 .0098015
+     tennessee  |   232.6134   13.20595    17.61   0.000                 .0385447
+         texas  |   255.0971   11.16196    22.85   0.000                 .1114785
+          utah  |   124.4579   15.07675     8.25   0.000                  .018381
+      virginia  |   387.2482   14.81557    26.14   0.000                  .067097
+    washington  |   361.8216   13.84142    26.14   0.000                 .0888059
+     wisconsin  |   6.711552   14.16037     0.47   0.636                 .0007994
+                |
+          _cons |   5.223872   20.51682     0.25   0.799                        .
+---------------------------------------------------------------------------------
+
+. outreg2 using ols_rent, word
+ols_rent.rtf
+dir : seeout
+
+. 
+end of do-file
+
+. do "C:\Users\gulle\AppData\Local\Temp\STD1fec_000000.tmp"
+
+. reg valueh WRLURI18 i.race i.educ i.hispan incwage i.statefip, robust beta
+
+Linear regression                               Number of obs     =    408,153
+                                                F(59, 408093)     =    1063.31
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.2044
+                                                Root MSE          =     4.6e+05
+
+---------------------------------------------------------------------------------
+                |               Robust
+         valueh | Coefficient  std. err.      t    P>|t|                     Beta
+----------------+----------------------------------------------------------------
+       WRLURI18 |   153819.4   1873.111    82.12   0.000                  .166083
+                |
+           race |
+Black/Africa..  |   -82861.8   2217.881   -37.36   0.000                -.0423062
+American Ind..  |   -19406.4   17295.05    -1.12   0.262                -.0027812
+       Chinese  |   158066.6   7071.442    22.35   0.000                 .0496787
+      Japanese  |   79545.04   23904.53     3.33   0.001                 .0070024
+Other Asian ..  |   13933.53   3432.366     4.06   0.000                 .0069406
+Other race, ..  |  -28355.73   3528.422    -8.04   0.000                -.0109486
+Two major ra..  |  -5125.921   4611.411    -1.11   0.266                -.0016084
+Three or mor..  |  -10440.74   12602.12    -0.83   0.407                -.0012103
+                |
+           educ |
+      Grade 12  |  -77901.17   5974.394   -13.04   0.000                -.0677157
+1 year of co..  |  -55627.22   6100.595    -9.12   0.000                -.0376001
+2 years of c..  |  -79201.33   6199.346   -12.78   0.000                -.0435472
+4 years of c..  |   10635.68   6120.594     1.74   0.082                 .0092493
+5+ years of ..  |   49928.76   6417.764     7.78   0.000                 .0363137
+                |
+         hispan |
+       Mexican  |  -146029.9   2551.271   -57.24   0.000                -.0886832
+   Puerto Rico  |  -55953.41   5084.824   -11.00   0.000                -.0130593
+         Cuban  |   3937.484   9368.748     0.42   0.674                 .0005514
+         Other  |  -40395.43   4035.576   -10.01   0.000                -.0151594
+                |
+        incwage |    1.08126   .0211048    51.23   0.000                 .1554084
+                |
+       statefip |
+       arizona  |   40.78722   5403.347     0.01   0.994                 .0000135
+      arkansas  |   43304.76   7111.058     6.09   0.000                 .0058768
+    california  |   377020.7   5593.084    67.41   0.000                 .2788596
+      colorado  |   156495.9   13588.32    11.52   0.000                 .0131366
+   connecticut  |     131174   7182.843    18.26   0.000                 .0338566
+      delaware  |  -17622.41   7099.445    -2.48   0.013                 -.002406
+district of ..  |   329410.9   16891.68    19.50   0.000                 .0370173
+       florida  |   27951.33   5111.337     5.47   0.000                 .0137036
+       georgia  |   63403.62   5321.449    11.91   0.000                 .0182216
+      illinois  |   96452.12   5192.582    18.57   0.000                 .0411511
+       indiana  |   -76388.1   5568.868   -13.72   0.000                -.0161281
+          iowa  |  -53376.53   13585.73    -3.93   0.000                -.0025984
+        kansas  |   9538.861    7902.67     1.21   0.227                 .0012095
+      kentucky  |    27883.6   6579.715     4.24   0.000                 .0043835
+     louisiana  |    28628.1   8474.065     3.38   0.001                 .0047156
+         maine  |  -34930.77   7223.098    -4.84   0.000                -.0024223
+      maryland  |  -11432.59   5870.519    -1.95   0.051                -.0038496
+ massachusetts  |   385525.4   21216.58    18.17   0.000                 .0401859
+      michigan  |   40937.46   4998.933     8.19   0.000                 .0147218
+     minnesota  |   64911.72   5929.252    10.95   0.000                 .0134556
+   mississippi  |  -74821.77   9206.536    -8.13   0.000                -.0074014
+      missouri  |   40178.96   5555.622     7.23   0.000                 .0093852
+      nebraska  |   22213.81   7248.757     3.06   0.002                 .0025228
+        nevada  |   5737.921   11009.03     0.52   0.602                 .0005512
+    new jersey  |   16128.81   5636.198     2.86   0.004                 .0067126
+    new mexico  |   311158.8    55161.5     5.64   0.000                 .0272799
+      new york  |   197475.4   6241.185    31.64   0.000                 .0962208
+north carolina  |   52270.68   5269.998     9.92   0.000                 .0161742
+          ohio  |   2658.598   4949.404     0.54   0.591                 .0009541
+      oklahoma  |  -723.5225   7692.617    -0.09   0.925                -.0000892
+        oregon  |     106167   6394.395    16.60   0.000                 .0242498
+  pennsylvania  |  -39713.07   4990.672    -7.96   0.000                -.0155674
+  rhode island  |  -83094.19   8036.296   -10.34   0.000                 -.011169
+south carolina  |   52949.13   6638.386     7.98   0.000                 .0080486
+     tennessee  |   39487.08    6020.61     6.56   0.000                 .0094006
+         texas  |   51956.97   4900.418    10.60   0.000                 .0318899
+          utah  |   50077.74   6403.378     7.82   0.000                 .0126619
+      virginia  |   151896.5   6468.349    23.48   0.000                 .0355662
+    washington  |   187262.7    5939.19    31.53   0.000                 .0653847
+     wisconsin  |  -13214.05   5906.737    -2.24   0.025                -.0023737
+                |
+          _cons |   251929.3   7414.097    33.98   0.000                        .
+---------------------------------------------------------------------------------
+
+. outreg2 using ols_valueh, word
+ols_valueh.rtf
+dir : seeout
+
+. reg rent WRLURI18 i.race i.educ i.hispan incwage i.statefip, robust beta
+
+Linear regression                               Number of obs     =    242,206
+                                                F(59, 242146)     =    2076.75
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.3630
+                                                Root MSE          =     575.62
+
+---------------------------------------------------------------------------------
+                |               Robust
+           rent | Coefficient  std. err.      t    P>|t|                     Beta
+----------------+----------------------------------------------------------------
+       WRLURI18 |    286.875   3.604057    79.60   0.000                 .2211594
+                |
+           race |
+Black/Africa..  |  -206.9197   3.167448   -65.33   0.000                -.1026207
+American Ind..  |  -188.8119     14.176   -13.32   0.000                -.0216086
+       Chinese  |   66.39937   10.19376     6.51   0.000                 .0136414
+      Japanese  |    226.259   27.94496     8.10   0.000                 .0183141
+Other Asian ..  |   .9098875   5.083534     0.18   0.858                  .000332
+Other race, ..  |  -48.66245   4.786585   -10.17   0.000                -.0179949
+Two major ra..  |  -30.27733   6.374813    -4.75   0.000                -.0080019
+Three or mor..  |  -25.49015   18.42267    -1.38   0.166                -.0024582
+                |
+           educ |
+      Grade 12  |   32.75928   7.000864     4.68   0.000                 .0214859
+1 year of co..  |   114.7781   7.310017    15.70   0.000                 .0607229
+2 years of c..  |   100.0059   7.800419    12.82   0.000                  .037376
+4 years of c..  |   296.8866   7.425975    39.98   0.000                 .1797323
+5+ years of ..  |   367.6033   8.120926    45.27   0.000                 .1689433
+                |
+         hispan |
+       Mexican  |  -184.3249   3.917424   -47.05   0.000                  -.09084
+   Puerto Rico  |   -158.368   6.971257   -22.72   0.000                -.0350235
+         Cuban  |  -36.94707   15.21043    -2.43   0.015                  -.00388
+         Other  |  -89.85051   5.114926   -17.57   0.000                 -.030859
+                |
+        incwage |   .0025477   .0000414    61.59   0.000                 .1752522
+                |
+       statefip |
+       arizona  |   92.14198   11.99781     7.68   0.000                 .0218942
+      arkansas  |   104.4162   15.76871     6.62   0.000                 .0094226
+    california  |    666.785   11.38184    58.58   0.000                 .4022371
+      colorado  |   372.9476   20.12588    18.53   0.000                 .0244831
+   connecticut  |   418.2633   14.10659    29.65   0.000                 .0693755
+      delaware  |   141.7872   17.14264     8.27   0.000                 .0117496
+district of ..  |   780.8637   20.75084    37.63   0.000                 .0960048
+       florida  |   308.6884   11.31853    27.27   0.000                 .1070901
+       georgia  |    323.736   12.81817    25.26   0.000                 .0533039
+      illinois  |   391.3536   11.98271    32.66   0.000                 .1072118
+       indiana  |   -86.4594   13.53583    -6.39   0.000                 -.012519
+          iowa  |    149.649   49.22889     3.04   0.002                 .0056238
+        kansas  |   94.91181   17.82094     5.33   0.000                 .0077423
+      kentucky  |   89.70499    14.7938     6.06   0.000                 .0087308
+     louisiana  |   138.6217   16.40591     8.45   0.000                 .0163042
+         maine  |    65.4854   29.28325     2.24   0.025                 .0026728
+      maryland  |   336.4529    13.8752    24.25   0.000                 .0685676
+ massachusetts  |   896.2591   18.66582    48.02   0.000                 .1255452
+      michigan  |   189.3036   12.09753    15.65   0.000                 .0385404
+     minnesota  |   365.4595     16.365    22.33   0.000                 .0448391
+   mississippi  |   -10.8334   17.88468    -0.61   0.545                -.0006832
+      missouri  |   127.4829   13.32551     9.57   0.000                  .018646
+      nebraska  |   155.0123   17.38847     8.91   0.000                  .011482
+        nevada  |   92.23023   21.96969     4.20   0.000                 .0069438
+    new jersey  |   366.1272   12.91073    28.36   0.000                 .0972589
+    new mexico  |  -65.00351   31.38237    -2.07   0.038                -.0030467
+      new york  |   494.4583   12.03028    41.10   0.000                 .2027472
+north carolina  |   185.5035   11.78037    15.75   0.000                 .0419318
+          ohio  |   101.8168   11.68482     8.71   0.000                 .0251114
+      oklahoma  |   59.05289   15.27247     3.87   0.000                 .0053005
+        oregon  |   275.9595   13.41337    20.57   0.000                 .0467801
+  pennsylvania  |   91.68823   12.18851     7.52   0.000                 .0214085
+  rhode island  |  -49.85793   17.72258    -2.81   0.005                -.0044467
+south carolina  |   133.1424   15.44322     8.62   0.000                  .011595
+     tennessee  |    158.563   13.19655    12.02   0.000                 .0262744
+         texas  |   275.8004   11.04523    24.97   0.000                  .120526
+          utah  |   36.89048   14.24629     2.59   0.010                 .0054483
+      virginia  |   553.2551   13.92801    39.72   0.000                 .0958604
+    washington  |   486.9163   12.54657    38.81   0.000                 .1195092
+     wisconsin  |   16.70284   14.21178     1.18   0.240                 .0019894
+                |
+          _cons |    694.703   12.65843    54.88   0.000                        .
+---------------------------------------------------------------------------------
+
+. outreg2 using ols_rent, word
+ols_rent.rtf
+dir : seeout
+
+. 
+end of do-file
+
+. do "C:\Users\gulle\AppData\Local\Temp\STD1fec_000000.tmp"
+
+. reg valueh WRLURI18 i.race i.educ i.hispan incwage i.statefip, robust beta
+
+Linear regression                               Number of obs     =    408,153
+                                                F(59, 408093)     =    1063.31
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.2044
+                                                Root MSE          =     4.6e+05
+
+---------------------------------------------------------------------------------
+                |               Robust
+         valueh | Coefficient  std. err.      t    P>|t|                     Beta
+----------------+----------------------------------------------------------------
+       WRLURI18 |   153819.4   1873.111    82.12   0.000                  .166083
+                |
+           race |
+Black/Africa..  |   -82861.8   2217.881   -37.36   0.000                -.0423062
+American Ind..  |   -19406.4   17295.05    -1.12   0.262                -.0027812
+       Chinese  |   158066.6   7071.442    22.35   0.000                 .0496787
+      Japanese  |   79545.04   23904.53     3.33   0.001                 .0070024
+Other Asian ..  |   13933.53   3432.366     4.06   0.000                 .0069406
+Other race, ..  |  -28355.73   3528.422    -8.04   0.000                -.0109486
+Two major ra..  |  -5125.921   4611.411    -1.11   0.266                -.0016084
+Three or mor..  |  -10440.74   12602.12    -0.83   0.407                -.0012103
+                |
+           educ |
+      Grade 12  |  -77901.17   5974.394   -13.04   0.000                -.0677157
+1 year of co..  |  -55627.22   6100.595    -9.12   0.000                -.0376001
+2 years of c..  |  -79201.33   6199.346   -12.78   0.000                -.0435472
+4 years of c..  |   10635.68   6120.594     1.74   0.082                 .0092493
+5+ years of ..  |   49928.76   6417.764     7.78   0.000                 .0363137
+                |
+         hispan |
+       Mexican  |  -146029.9   2551.271   -57.24   0.000                -.0886832
+   Puerto Rico  |  -55953.41   5084.824   -11.00   0.000                -.0130593
+         Cuban  |   3937.484   9368.748     0.42   0.674                 .0005514
+         Other  |  -40395.43   4035.576   -10.01   0.000                -.0151594
+                |
+        incwage |    1.08126   .0211048    51.23   0.000                 .1554084
+                |
+       statefip |
+       arizona  |   40.78722   5403.347     0.01   0.994                 .0000135
+      arkansas  |   43304.76   7111.058     6.09   0.000                 .0058768
+    california  |   377020.7   5593.084    67.41   0.000                 .2788596
+      colorado  |   156495.9   13588.32    11.52   0.000                 .0131366
+   connecticut  |     131174   7182.843    18.26   0.000                 .0338566
+      delaware  |  -17622.41   7099.445    -2.48   0.013                 -.002406
+district of ..  |   329410.9   16891.68    19.50   0.000                 .0370173
+       florida  |   27951.33   5111.337     5.47   0.000                 .0137036
+       georgia  |   63403.62   5321.449    11.91   0.000                 .0182216
+      illinois  |   96452.12   5192.582    18.57   0.000                 .0411511
+       indiana  |   -76388.1   5568.868   -13.72   0.000                -.0161281
+          iowa  |  -53376.53   13585.73    -3.93   0.000                -.0025984
+        kansas  |   9538.861    7902.67     1.21   0.227                 .0012095
+      kentucky  |    27883.6   6579.715     4.24   0.000                 .0043835
+     louisiana  |    28628.1   8474.065     3.38   0.001                 .0047156
+         maine  |  -34930.77   7223.098    -4.84   0.000                -.0024223
+      maryland  |  -11432.59   5870.519    -1.95   0.051                -.0038496
+ massachusetts  |   385525.4   21216.58    18.17   0.000                 .0401859
+      michigan  |   40937.46   4998.933     8.19   0.000                 .0147218
+     minnesota  |   64911.72   5929.252    10.95   0.000                 .0134556
+   mississippi  |  -74821.77   9206.536    -8.13   0.000                -.0074014
+      missouri  |   40178.96   5555.622     7.23   0.000                 .0093852
+      nebraska  |   22213.81   7248.757     3.06   0.002                 .0025228
+        nevada  |   5737.921   11009.03     0.52   0.602                 .0005512
+    new jersey  |   16128.81   5636.198     2.86   0.004                 .0067126
+    new mexico  |   311158.8    55161.5     5.64   0.000                 .0272799
+      new york  |   197475.4   6241.185    31.64   0.000                 .0962208
+north carolina  |   52270.68   5269.998     9.92   0.000                 .0161742
+          ohio  |   2658.598   4949.404     0.54   0.591                 .0009541
+      oklahoma  |  -723.5225   7692.617    -0.09   0.925                -.0000892
+        oregon  |     106167   6394.395    16.60   0.000                 .0242498
+  pennsylvania  |  -39713.07   4990.672    -7.96   0.000                -.0155674
+  rhode island  |  -83094.19   8036.296   -10.34   0.000                 -.011169
+south carolina  |   52949.13   6638.386     7.98   0.000                 .0080486
+     tennessee  |   39487.08    6020.61     6.56   0.000                 .0094006
+         texas  |   51956.97   4900.418    10.60   0.000                 .0318899
+          utah  |   50077.74   6403.378     7.82   0.000                 .0126619
+      virginia  |   151896.5   6468.349    23.48   0.000                 .0355662
+    washington  |   187262.7    5939.19    31.53   0.000                 .0653847
+     wisconsin  |  -13214.05   5906.737    -2.24   0.025                -.0023737
+                |
+          _cons |   251929.3   7414.097    33.98   0.000                        .
+---------------------------------------------------------------------------------
+
+. outreg2 using ols_valueh1, word
+ols_valueh1.rtf
+dir : seeout
+
+. reg rent WRLURI18 i.race i.educ i.hispan incwage i.statefip, robust beta
+
+Linear regression                               Number of obs     =    242,206
+                                                F(59, 242146)     =    2076.75
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.3630
+                                                Root MSE          =     575.62
+
+---------------------------------------------------------------------------------
+                |               Robust
+           rent | Coefficient  std. err.      t    P>|t|                     Beta
+----------------+----------------------------------------------------------------
+       WRLURI18 |    286.875   3.604057    79.60   0.000                 .2211594
+                |
+           race |
+Black/Africa..  |  -206.9197   3.167448   -65.33   0.000                -.1026207
+American Ind..  |  -188.8119     14.176   -13.32   0.000                -.0216086
+       Chinese  |   66.39937   10.19376     6.51   0.000                 .0136414
+      Japanese  |    226.259   27.94496     8.10   0.000                 .0183141
+Other Asian ..  |   .9098875   5.083534     0.18   0.858                  .000332
+Other race, ..  |  -48.66245   4.786585   -10.17   0.000                -.0179949
+Two major ra..  |  -30.27733   6.374813    -4.75   0.000                -.0080019
+Three or mor..  |  -25.49015   18.42267    -1.38   0.166                -.0024582
+                |
+           educ |
+      Grade 12  |   32.75928   7.000864     4.68   0.000                 .0214859
+1 year of co..  |   114.7781   7.310017    15.70   0.000                 .0607229
+2 years of c..  |   100.0059   7.800419    12.82   0.000                  .037376
+4 years of c..  |   296.8866   7.425975    39.98   0.000                 .1797323
+5+ years of ..  |   367.6033   8.120926    45.27   0.000                 .1689433
+                |
+         hispan |
+       Mexican  |  -184.3249   3.917424   -47.05   0.000                  -.09084
+   Puerto Rico  |   -158.368   6.971257   -22.72   0.000                -.0350235
+         Cuban  |  -36.94707   15.21043    -2.43   0.015                  -.00388
+         Other  |  -89.85051   5.114926   -17.57   0.000                 -.030859
+                |
+        incwage |   .0025477   .0000414    61.59   0.000                 .1752522
+                |
+       statefip |
+       arizona  |   92.14198   11.99781     7.68   0.000                 .0218942
+      arkansas  |   104.4162   15.76871     6.62   0.000                 .0094226
+    california  |    666.785   11.38184    58.58   0.000                 .4022371
+      colorado  |   372.9476   20.12588    18.53   0.000                 .0244831
+   connecticut  |   418.2633   14.10659    29.65   0.000                 .0693755
+      delaware  |   141.7872   17.14264     8.27   0.000                 .0117496
+district of ..  |   780.8637   20.75084    37.63   0.000                 .0960048
+       florida  |   308.6884   11.31853    27.27   0.000                 .1070901
+       georgia  |    323.736   12.81817    25.26   0.000                 .0533039
+      illinois  |   391.3536   11.98271    32.66   0.000                 .1072118
+       indiana  |   -86.4594   13.53583    -6.39   0.000                 -.012519
+          iowa  |    149.649   49.22889     3.04   0.002                 .0056238
+        kansas  |   94.91181   17.82094     5.33   0.000                 .0077423
+      kentucky  |   89.70499    14.7938     6.06   0.000                 .0087308
+     louisiana  |   138.6217   16.40591     8.45   0.000                 .0163042
+         maine  |    65.4854   29.28325     2.24   0.025                 .0026728
+      maryland  |   336.4529    13.8752    24.25   0.000                 .0685676
+ massachusetts  |   896.2591   18.66582    48.02   0.000                 .1255452
+      michigan  |   189.3036   12.09753    15.65   0.000                 .0385404
+     minnesota  |   365.4595     16.365    22.33   0.000                 .0448391
+   mississippi  |   -10.8334   17.88468    -0.61   0.545                -.0006832
+      missouri  |   127.4829   13.32551     9.57   0.000                  .018646
+      nebraska  |   155.0123   17.38847     8.91   0.000                  .011482
+        nevada  |   92.23023   21.96969     4.20   0.000                 .0069438
+    new jersey  |   366.1272   12.91073    28.36   0.000                 .0972589
+    new mexico  |  -65.00351   31.38237    -2.07   0.038                -.0030467
+      new york  |   494.4583   12.03028    41.10   0.000                 .2027472
+north carolina  |   185.5035   11.78037    15.75   0.000                 .0419318
+          ohio  |   101.8168   11.68482     8.71   0.000                 .0251114
+      oklahoma  |   59.05289   15.27247     3.87   0.000                 .0053005
+        oregon  |   275.9595   13.41337    20.57   0.000                 .0467801
+  pennsylvania  |   91.68823   12.18851     7.52   0.000                 .0214085
+  rhode island  |  -49.85793   17.72258    -2.81   0.005                -.0044467
+south carolina  |   133.1424   15.44322     8.62   0.000                  .011595
+     tennessee  |    158.563   13.19655    12.02   0.000                 .0262744
+         texas  |   275.8004   11.04523    24.97   0.000                  .120526
+          utah  |   36.89048   14.24629     2.59   0.010                 .0054483
+      virginia  |   553.2551   13.92801    39.72   0.000                 .0958604
+    washington  |   486.9163   12.54657    38.81   0.000                 .1195092
+     wisconsin  |   16.70284   14.21178     1.18   0.240                 .0019894
+                |
+          _cons |    694.703   12.65843    54.88   0.000                        .
+---------------------------------------------------------------------------------
+
+. outreg2 using ols_rent1, word
+ols_rent1.rtf
+dir : seeout
+
+. 
+end of do-file
+
+. 7.74e-08 * 1000
+7.74e is not a valid command name
+r(199);
+
+. di 7.74e-08 * 1000
+.0000774
+
+. di -3.17e-07 * 1000
+-.000317
+
+. di .0001171 * 500
+.05855
+
+. di -3.24e-06 * 500
+-.00162
+
+. di 2.89e-07 * 1000
+.000289
+
+. di -7.43e-07 * 1000
+-.000743
+
+. di .0000149 * 500
+.00745
+
+. di -.0003125 * 500
+-.15625
+
+. di 1.00e-08 * 1000
+.00001
+
+. di -4.28e-07 * 1000
+-.000428
+
+. di -4.94e-07 * 1000
+-.000494
+
+. di -6.23e-07 * 1000
+-.000623
+
+. di -.0000156 * 1000
+-.0156
+
+. di -2.64e-07 * 1000
+-.000264
+
+. di 2.72e-07 * 1000
+.000272
+
+. di 9.89e-07 * 1000
+.000989
+
+. di -3.01e-07 * 1000
+-.000301
+
+. di -7.62e-07 * 1000
+-.000762
+
+. di -3.17e-07 * 1000
+-.000317
+
+. di -2.62e-07 * 1000
+-.000262
+
+. di -3.22e-07 * 1000
+-.000322
+
+. di -.0003168 * 500
+-.1584
+
+. di -.0001303 * 500
+-.06515
+
+. di -.0056915 * 500
+-2.84575
+
+. di -.0002816 * 500
+-.1408
+
+. di .0036334   * 500
+1.8167
+
+. di .0006348  * 500
+.3174
+
+. di -.0001528   * 500
+-.0764
+
+. di -.000287   * 500
+-.1435
+
+. di -.0002702   * 500
+-.1351
+
+. di -.0001646   * 500
+-.0823
+
+. di -.0002041   * 500
+-.10205
+
+. exit, clear
